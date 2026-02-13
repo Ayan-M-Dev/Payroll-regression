@@ -1,0 +1,22 @@
+# =============================================================================
+# .gitignore — Postman Regression Suite
+# =============================================================================
+
+# Environment files (contain secrets)
+.env
+.env.local
+.env.*.local
+
+# Test artifacts (generated at runtime)
+artifacts/
+
+# Docker
+*.tar
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/

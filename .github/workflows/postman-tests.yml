@@ -1,0 +1,103 @@
+# =============================================================================
+# GitHub Actions — Postman CLI Regression Suite
+# =============================================================================
+# Runs the Payroll API regression tests using the official Postman CLI inside
+# an Ubuntu 22.04 container. Collection and environment are fetched from the
+# Postman cloud workspace — no local JSON exports required.
+#
+# Required GitHub Secrets:
+#   POSTMAN_API_KEY  — Postman API key for authentication
+#   COLLECTION_ID    — Postman Collection UID
+#   ENVIRONMENT_ID   — Postman Environment UID
+#   BASE_URL         — Staging / target API base URL
+#   AUTH_TOKEN        — Bearer token for authenticated endpoints
+# =============================================================================
+
+name: Payroll API — Postman Regression Tests
+
+# ── Triggers ─────────────────────────────────────────────────────────────────
+on:
+  # Run on every pull request targeting main
+  pull_request:
+    branches:
+      - main
+
+  # Run on every push (merge) to main
+  push:
+    branches:
+      - main
+
+  # Nightly scheduled run (02:00 UTC every day)
+  schedule:
+    - cron: "0 2 * * *"
+
+  # Allow manual trigger from the Actions UI
+  workflow_dispatch:
+
+# ── Jobs ─────────────────────────────────────────────────────────────────────
+jobs:
+  postman-regression:
+    name: Run Postman Regression Suite
+    runs-on: ubuntu-latest
+
+    # Run the entire job inside an Ubuntu 22.04 container for consistency
+    container:
+      image: ubuntu:22.04
+
+    steps:
+      # ── 1. Checkout repository ─────────────────────────────────────────────
+      # Required so the workflow has access to the repo context (e.g., PR info)
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # ── 2. Install system dependencies ─────────────────────────────────────
+      # curl + ca-certificates are needed by the Postman CLI installer
+      - name: Install system dependencies
+        run: |
+          apt-get update
+          apt-get install -y --no-install-recommends curl ca-certificates
+          rm -rf /var/lib/apt/lists/*
+
+      # ── 3. Install Postman CLI ─────────────────────────────────────────────
+      # Uses the official Postman installer script for linux64
+      - name: Install Postman CLI
+        run: |
+          curl -o- "https://dl-cli.pstmn.io/install/linux64.sh" | sh
+
+      # ── 4. Create artifacts output directory ───────────────────────────────
+      - name: Create artifacts directory
+        run: mkdir -p artifacts
+
+      # ── 5. Run the Postman collection ──────────────────────────────────────
+      # - POSTMAN_API_KEY is passed as an env var; the CLI auto-authenticates
+      #   (no explicit `postman login` needed — it fails in headless CI)
+      # - Collection and environment are referenced by UID (fetched from cloud)
+      # - base_url and auth_token are injected via --env-var overrides
+      # - Reports: cli (stdout), html, junit (for CI parsers), json
+      # - --bail: fail fast on first assertion error
+      # - --verbose: detailed request/response logging
+      - name: Run Postman collection
+        env:
+          POSTMAN_API_KEY: ${{ secrets.POSTMAN_API_KEY }}
+        run: |
+          postman collection run ${{ secrets.COLLECTION_ID }} \
+            --environment ${{ secrets.ENVIRONMENT_ID }} \
+            --env-var "base_url=${{ secrets.BASE_URL }}" \
+            --env-var "auth_token=${{ secrets.AUTH_TOKEN }}" \
+            --reporters cli,html,junit,json \
+            --reporter-html-export artifacts/report.html \
+            --reporter-junit-export artifacts/results.xml \
+            --reporter-json-export artifacts/results.json \
+            --bail \
+            --verbose
+
+      # ── 7. Upload test artifacts ───────────────────────────────────────────
+      # Artifacts are uploaded regardless of test pass/fail so engineers can
+      # inspect HTML reports, JUnit XML (for test-summary tools), and raw JSON.
+      - name: Upload test artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: postman-regression-results
+          path: artifacts/
+          retention-days: 30
