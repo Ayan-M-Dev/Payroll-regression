@@ -104,14 +104,29 @@ jobs:
       - name: Run Postman collection
         env:
           RAW_API_KEY: ${{ secrets.POSTMAN_API_KEY }}
+          RAW_COLLECTION_ID: ${{ secrets.COLLECTION_ID }}
+          RAW_ENVIRONMENT_ID: ${{ secrets.ENVIRONMENT_ID }}
+          RAW_BASE_URL: ${{ secrets.BASE_URL }}
+          RAW_AUTH_TOKEN: ${{ secrets.AUTH_TOKEN }}
         run: |
-          # Sanitize API Key to remove trailing newlines/whitespace (fixes "Invalid character in header" error)
+          # ── Sanitize Secrets ───────────────────────────────────────────────────
+          # Strip accidental newlines/whitespace that break shell commands
           export POSTMAN_API_KEY=$(echo "$RAW_API_KEY" | tr -d '\r\n')
+          export COLLECTION_ID=$(echo "$RAW_COLLECTION_ID" | tr -d '\r\n')
+          export ENVIRONMENT_ID=$(echo "$RAW_ENVIRONMENT_ID" | tr -d '\r\n')
+          export BASE_URL=$(echo "$RAW_BASE_URL" | tr -d '\r\n')
+          export AUTH_TOKEN=$(echo "$RAW_AUTH_TOKEN" | tr -d '\r\n')
 
-          postman collection run ${{ secrets.COLLECTION_ID }} \
-            --environment ${{ secrets.ENVIRONMENT_ID }} \
-            --env-var "base_url=${{ secrets.BASE_URL }}" \
-            --env-var "auth_token=${{ secrets.AUTH_TOKEN }}" \
+          # ── Debug Info (Secrets are masked by GitHub) ──────────────────────────
+          echo "Running collection: $COLLECTION_ID"
+          echo "Environment: $ENVIRONMENT_ID"
+          echo "Base URL: $BASE_URL"
+
+          # ── Execute ────────────────────────────────────────────────────────────
+          postman collection run "$COLLECTION_ID" \
+            --environment "$ENVIRONMENT_ID" \
+            --env-var "base_url=$BASE_URL" \
+            --env-var "auth_token=$AUTH_TOKEN" \
             --reporters cli,html,junit,json \
             --reporter-html-export artifacts/report.html \
             --reporter-junit-export artifacts/results.xml \
