@@ -58,7 +58,33 @@ jobs:
           apt-get install -y --no-install-recommends curl ca-certificates
           rm -rf /var/lib/apt/lists/*
 
-      # ── 3. Install Postman CLI ─────────────────────────────────────────────
+      # ── 3. Validate Secrets ────────────────────────────────────────────────
+      # Ensures all required secrets are configured in GitHub Settings.
+      # Fails fast with a clear message if any are missing.
+      - name: Validate Secrets
+        env:
+          POSTMAN_API_KEY: ${{ secrets.POSTMAN_API_KEY }}
+          COLLECTION_ID: ${{ secrets.COLLECTION_ID }}
+          ENVIRONMENT_ID: ${{ secrets.ENVIRONMENT_ID }}
+          BASE_URL: ${{ secrets.BASE_URL }}
+          AUTH_TOKEN: ${{ secrets.AUTH_TOKEN }}
+        run: |
+          MISSING=0
+          if [[ -z "$POSTMAN_API_KEY" ]]; then echo "❌ Error: Secret 'POSTMAN_API_KEY' is missing"; MISSING=1; fi
+          if [[ -z "$COLLECTION_ID" ]]; then echo "❌ Error: Secret 'COLLECTION_ID' is missing"; MISSING=1; fi
+          if [[ -z "$ENVIRONMENT_ID" ]]; then echo "❌ Error: Secret 'ENVIRONMENT_ID' is missing"; MISSING=1; fi
+          if [[ -z "$BASE_URL" ]]; then echo "❌ Error: Secret 'BASE_URL' is missing"; MISSING=1; fi
+          if [[ -z "$AUTH_TOKEN" ]]; then echo "❌ Error: Secret 'AUTH_TOKEN' is missing"; MISSING=1; fi
+          
+          if [[ "$MISSING" -eq 1 ]]; then
+            echo "--------------------------------------------------------"
+            echo "Please configure these secrets in your GitHub Repository:"
+            echo "Settings > Secrets and variables > Actions > New repository secret"
+            echo "--------------------------------------------------------"
+            exit 1
+          fi
+
+      # ── 4. Install Postman CLI ─────────────────────────────────────────────
       # Uses the official Postman installer script for linux64
       - name: Install Postman CLI
         run: |
