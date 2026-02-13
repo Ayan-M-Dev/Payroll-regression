@@ -103,8 +103,11 @@ jobs:
       # - --verbose: detailed request/response logging
       - name: Run Postman collection
         env:
-          POSTMAN_API_KEY: ${{ secrets.POSTMAN_API_KEY }}
+          RAW_API_KEY: ${{ secrets.POSTMAN_API_KEY }}
         run: |
+          # Sanitize API Key to remove trailing newlines/whitespace (fixes "Invalid character in header" error)
+          export POSTMAN_API_KEY=$(echo "$RAW_API_KEY" | tr -d '\r\n')
+
           postman collection run ${{ secrets.COLLECTION_ID }} \
             --environment ${{ secrets.ENVIRONMENT_ID }} \
             --env-var "base_url=${{ secrets.BASE_URL }}" \
