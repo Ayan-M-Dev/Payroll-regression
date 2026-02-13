@@ -59,7 +59,6 @@ jobs:
           rm -rf /var/lib/apt/lists/*
 
       # ── 3. Validate Secrets ────────────────────────────────────────────────
-      # Ensures all required secrets are configured in GitHub Settings.
       # Fails fast with a clear message if any are missing.
       - name: Validate Secrets
         env:

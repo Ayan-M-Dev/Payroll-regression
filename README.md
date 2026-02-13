@@ -1,7 +1,6 @@
-# Payroll API — Postman Regression Suite
+# Payroll API — Postman Regression 
 
 > **Production-grade, fully containerized** Postman CLI regression tests for the Payroll API.  
-> No host-level Postman installation required. Everything runs inside Docker.
 
 ---
 
